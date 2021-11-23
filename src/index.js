@@ -1,84 +1,60 @@
 import './css/styles.css';
-
-import './css/styles.css';
 import debounce from 'lodash.debounce';
 import Notiflix from 'notiflix';
-import {fetchCountries} from "./js/fetchCountries";
+import { fetchCountries } from './js/fetchCountries';
 
 const DEBOUNCE_DELAY = 300;
 
-const refs = {
-    countryInput: document.querySelector("#search-box"),
-    countryList: document.querySelector('.country-list'),
-    countryInfo: document.querySelector('.country-info'),
+const inputSearchBox = document.querySelector(`#search-box`);
+const сountryList = document.querySelector(`.country-list`);
+const countryInfo = document.querySelector(`.country-info`);
+
+function showCountry() {
+  fetchCountries(inputSearchBox.value.trim())
+    .then(country => {
+      countryInfo.innerHTML = '';
+      сountryList.innerHTML = '';
+      console.log(country.length);
+      if (country.length > 10) {
+        Notiflix.Notify.info('Too many matches found. Please enter a more specific name.');
+      } else if (country.length >= 2 && country.length <= 10) {
+        renderCountryList(country);
+      } else if (country.length === 1) {
+        renderCountryInfo(country);
+      }
+    })
+
+    .catch(showError);
 }
 
-fetchCountries();
-refs.countryInput.addEventListener('input', debounce(searchCountry, DEBOUNCE_DELAY));
-
-function searchCountry() {
-  const inputText = refs.countryInput.value.trim();
-
-  clear()
-
-  if (!inputText) {
-    return;
-    }
-    
-  fetchCountries(inputText)
-    .then(countries => {
-      if (countries.status === 404) {
-        Notiflix.Notify.failure("Oops, there is no country with that name");
-        return;
-      }
-      if (countries.length > 10) {
-        Notiflix.Notify.info("Too many matches found. Please enter a more specific name.")
-        return;
-      }
-      if (countries.length > 1) {
-        markupCountries(countries);
-        return;
-      }
-      markupOneCountry(countries);
-    })
-    .catch(error => console.log(error));
-};
-
-function markupCountries(countries) {
-  refs.countryInfo.innerHTML = '';
-  const markup = countries
-    .map(country => {
-      return `<li class="country-list--item">
-                <img src='${country.flag}' alt='${country.name} flag' width='40' />
-                <p>${country.name}</p>
-              </li>`;
+function renderCountryList(country) {
+  const markup = country
+    .map(({ flags, name }) => {
+      return `<li class="country-item">
+    <img class="country-item__img" src="${flags.svg}" 
+  width="30" alt="flag of ${name.common}"/>
+  <span class="country-item__name">${name.official}</span></li>`;
     })
     .join('');
-      refs.countryInfo.innerHTML = markup;
-};
-
-function markupOneCountry(country) {
-  refs.countryList.innerHTML = '';
-  const markup = country
-    .map(country => {
-      return `<div class="country">
-                <img src='${country.flag}' alt='${country.name} flag' width='70' />
-                <h2 class="country_name">${country.name}</h2>
-              </div>
-            <ul>
-                <li>Capital: ${country.capital}</span></li>
-                <li>Population: ${country.population}</span></li>
-                <li>Languages: ${country.languages.map(item => ` ${item.name}`)}</span></li>
-            </ul>`
-    })
-    refs.countryInfo.innerHTML = markup;
-};
-
-function clear() {
-  refs.countryInput.innerHTML = '';
-  refs.countryList.innerHTML = '';
+  сountryList.innerHTML = markup;
 }
 
+function renderCountryInfo([{ name, capital, population, flags, languages }]) {
+  const markupInfo = `<img src="${flags.svg}" 
+  width="50" alt="flag of ${name.official}"/>
+  <span class="country-item__name">${name.official}</span>
+  <p class="info">Capital:<span>${capital}</span></p>
+  <p class="info">Population:<span>${population}</span></p>
+  <p class="info">Languages:<span>${Object.values(languages).join(', ')}</span></p>`;
 
+  countryInfo.innerHTML = markupInfo;
+}
 
+function showError(error) {
+  console.log(error);
+  Notiflix.Notify.failure('Oops, there is no country with that name');
+  countryInfo.innerHTML = '';
+  сountryList.innerHTML = '';
+}
 
+inputSearchBox.addEventListener('input', debounce(showCountry, DEBOUNCE_DELAY));
